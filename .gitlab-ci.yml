@@ -1,0 +1,106 @@
+#this is the python version
+#this is not limited to python it can be anything that is required for your project (java etc)
+#specifies the platform to be used for the project
+image: "python:3.10.6"
+
+#assigning values to variables to implement referencing
+variables:
+  SOURCE: src
+  TESTS: tests
+
+#the different phases of the pipeline run
+#this can be as many as needed
+#just remember to reference in the job assiciated with the stage
+stages:
+  - static-analysis
+  - unit-test
+  #- code-scanning
+
+#this is a static analysis feature (google is your friend)
+mypy:
+  stage: static-analysis #specifying the stage it falls within
+  allow_failure: true #continue on failures
+  before_script: #scripts to run before running the analysis script
+                #usually for installing required packages to perfrom the actual command to scan
+    - export LC_ALL=C.UTF-8
+    - export LANG=C.UTF-8
+    - python --version
+    - pip install mypy lxml
+  script: #the analysis script to scan code
+    - "mypy --junit-xml reports/typecheck.xml --cobertura-xml-report reports --html-report reports --ignore-missing-imports ${SOURCE}"
+  retry: #the amount of time to retry before regarding a failure (timeout or sys failure)
+    max: 2 
+    when: #specifies the failures to lookout for before retrying
+      - runner_system_failure
+      - stuck_or_timeout_failure
+  artifacts: #storing the deliverables of the analysis scan
+    name: "$CI_JOB_NAME" 
+    paths:
+      - reports/*
+    when: always
+
+#this is a static analysis feature (google is your friend)
+flake8: 
+  stage: static-analysis
+  allow_failure: true
+  before_script:
+    - export LC_ALL=C.UTF-8
+    - export LANG=C.UTF-8
+    - python --version
+    - pip install flake8 flake8-html
+  script:
+    - "flake8 --max-line-length=120 --format=html --htmldir=flake-report --exit-zero flake-report/ ${SOURCE}/**/*.py"
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+  artifacts:
+    name: "$CI_JOB_NAME"
+    paths:
+      - flake-report/*
+    when: always
+
+#this is a static analysis feature (google is your friend)
+pylint: 
+  stage: static-analysis
+  allow_failure: true
+  before_script:
+    - export LC_ALL=C.UTF-8
+    - export LANG=C.UTF-8
+    - python --version
+    - pip install pylint
+  script:
+    - "pylint --rcfile=.pylintrc --exit-zero --msg-template='{msg_id}:{line:3d},{column}: {obj}: {msg}' -d C0301 ${SOURCE}/**/*.py > pylint.json"
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+  artifacts:
+    name: "$CI_JOB_NAME"
+    paths:
+      - pylint.json
+    when: always
+
+unit_test:
+  stage: unit-test
+  allow_failure: true
+  before_script:
+    - export LC_ALL=C.UTF-8
+    - export LANG=C.UTF-8
+    - python --version
+    - pip install pytest pytest-cov pytest-html pytest-json
+  script:
+    - "py.test --html=junit-results.html --junitxml=junit-results.xml --json=report.json --jsonapi --cov-config .coveragerc --cov=${SOURCE}/**/* ${TESTS} --cov-report xml"
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+  artifacts:
+    name: "$CI_JOB_NAME"
+    paths:
+      - coverage.xml
+      - junit-results.xml
+    when: always
