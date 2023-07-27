@@ -1,7 +1,7 @@
 #this is the python version
 #this is not limited to python it can be anything that is required for your project (java etc)
 #specifies the platform to be used for the project
-image: "python:3.10.6"
+image: "python:3.11.4"
 
 #assigning values to variables to implement referencing
 variables:
@@ -20,8 +20,7 @@ stages:
 mypy:
   stage: static-analysis #specifying the stage it falls within
   allow_failure: true #continue on failures
-  before_script: #scripts to run before running the analysis script
-                #usually for installing required packages to perfrom the actual command to scan
+  before_script: #scripts to run before running the analysis script. usually for installing required packages to perfrom the actual command to scan
     - export LC_ALL=C.UTF-8
     - export LANG=C.UTF-8
     - python --version
